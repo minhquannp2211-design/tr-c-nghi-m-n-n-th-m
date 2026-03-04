@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Citra Scent Quiz - Quản lý khảo sát</title>
+    <style>
+        :root { --primary: #c2956e; --text: #5a4a42; }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh;
+            background: url('nen.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text);
+        }
+
+        /* Giao diện Card ngang */
+        .quiz-card { 
+            background: rgba(255, 255, 255, 0.94); 
+            width: 90%; max-width: 750px; 
+            padding: 45px; border-radius: 30px; 
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3); 
+            backdrop-filter: blur(10px);
+            text-align: center;
+            position: relative;
+            transition: 0.5s;
+        }
+
+        .progress-bar { height: 5px; background: #eee; border-radius: 3px; margin-bottom: 35px; }
+        #progress-inner { height: 100%; background: var(--primary); width: 0%; transition: 0.5s; }
+
+        h2 { font-size: 1.5rem; margin-bottom: 30px; line-height: 1.5; }
+
+        .options { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .opt-btn { 
+            background: white; border: 1.5px solid #eee; padding: 20px; border-radius: 15px; 
+            cursor: pointer; transition: 0.3s; font-size: 15px; color: var(--text);
+        }
+        .opt-btn:hover { border-color: var(--primary); background: #fdfaf7; transform: translateY(-3px); }
+
+        input { 
+            width: 100%; padding: 18px; margin: 12px 0; border: 1px solid #ddd; 
+            border-radius: 15px; box-sizing: border-box; font-size: 16px;
+        }
+
+        /* Nút hiệu ứng nổi bật */
+        .cta-btn { 
+            background: var(--primary); color: white; padding: 18px 40px; border-radius: 40px; 
+            border: none; font-weight: bold; cursor: pointer; transition: 0.3s; 
+            box-shadow: 0 10px 25px rgba(194, 149, 110, 0.4); margin-top: 20px;
+            font-size: 16px;
+        }
+        .cta-btn:hover { transform: scale(1.05); box-shadow: 0 15px 30px rgba(194, 149, 110, 0.5); }
+
+        .hidden { display: none; }
+
+        /* Màn hình kết quả overlay trên ảnh nến */
+        #result-box {
+            background: url('nen.jpg') no-repeat center center;
+            background-size: cover; border-radius: 25px; padding: 60px 40px;
+            position: relative; color: white; overflow: hidden;
+        }
+        #result-box::before {
+            content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.55); z-index: 1;
+        }
+        #result-box > * { position: relative; z-index: 2; }
+
+        /* Nút quản lý ẩn góc dưới */
+        #admin-btn {
+            position: fixed; bottom: 15px; right: 15px; opacity: 0.1;
+            background: none; border: 1px solid #5a4a42; border-radius: 5px;
+            font-size: 10px; cursor: pointer; padding: 5px;
+        }
+        #admin-btn:hover { opacity: 0.8; background: white; }
+
+        @media (max-width: 600px) { .options { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="quiz-card" id="main-card">
+    <div id="game-zone">
+        <div class="progress-bar"><div id="progress-inner"></div></div>
+        <div id="question-text"><h2>Đang chuẩn bị câu hỏi...</h2></div>
+        <div id="options-zone" class="options"></div>
+    </div>
+
+    <div id="info-form" class="hidden">
+        <h2 style="color: var(--primary);">Khám phá mùi hương của bạn</h2>
+        <p>Vui lòng để lại thông tin để chúng mình lưu lại kết quả khảo sát nhé!</p>
+        <input type="text" id="user-name" placeholder="Họ và tên của bạn" required>
+        <input type="text" id="user-contact" placeholder="Số điện thoại hoặc Email" required>
+        <button class="cta-btn" onclick="submitInfo()">Thông tin người khảo sát</button>
+    </div>
+
+    <div id="result-box" class="hidden">
+        <p style="letter-spacing: 2px; font-size: 12px; opacity: 0.9;">TÂM HỒN BẠN MANG MÙI HƯƠNG CỦA...</p>
+        <h1 id="scent-name" style="font-size: 2.5rem; margin: 20px 0; color: #fefae0;"></h1>
+        <p id="scent-desc" style="line-height: 1.8; font-size: 17px; margin-bottom: 30px;"></p>
+        <p id="thank-you" style="font-style: italic; font-size: 14px; opacity: 0.8; margin-bottom: 20px;"></p>
+        <button class="cta-btn" style="background: white; color: var(--text); box-shadow: none;" onclick="location.reload()">Làm lại trắc nghiệm</button>
+    </div>
+</div>
+
+<button id="admin-btn" onclick="exportData()">XUẤT DỮ LIỆU KHẢO SÁT (EXCEL)</button>
+
+<script>
+    const data = [
+        { q: "Khoảnh khắc nào trong ngày khiến bạn cảm thấy bình yên nhất?", options: [{t: "Sáng sớm tinh mơ với tách trà", v: "NF"}, {t: "Góc làm việc gọn gàng lúc 9h sáng", v: "SJ"}, {t: "Hoàng hôn rực rỡ bên bờ biển", v: "SP"}, {t: "Đêm muộn tĩnh mịch để suy ngẫm", v: "NT"}] },
+        { q: "Nếu được chọn một không gian sống, bạn sẽ chọn...", options: [{t: "Một căn hộ tối giản, kỷ luật", v: "SJ"}, {t: "Nhà gỗ trong rừng đầy sách và tranh", v: "NF"}, {t: "Căn hộ thông minh, đầy công nghệ", v: "NT"}, {t: "Nhà di động để đi khắp thế gian", v: "SP"}] },
+        { q: "Bạn thường phản ứng thế nào với những thử thách mới?", options: [{t: "Phân tích mọi khả năng có thể xảy ra", v: "NT"}, {t: "Lắng nghe xem trái tim mình muốn gì", v: "NF"}, {t: "Chuẩn bị kế hoạch dự phòng kỹ lưỡng", v: "SJ"}, {t: "Lao vào trải nghiệm để học hỏi", v: "SP"}] },
+        { q: "Mùi hương nào gắn liền với kỷ niệm của bạn?", options: [{t: "Mùi sách cũ và gỗ mục", v: "NT"}, {t: "Mùi bánh nướng và quế ấm", v: "SJ"}, {t: "Mùi hoa nhài sau cơn mưa", v: "NF"}, {t: "Mùi gió muối và trái cây nhiệt đới", v: "SP"}] },
+        { q: "Phong cách làm việc của bạn là gì?", options: [{t: "Tập trung tuyệt đối vào logic", v: "NT"}, {t: "Luôn tìm kiếm ý nghĩa và sự kết nối", v: "NF"}, {t: "Đúng giờ và tuân thủ quy trình", v: "SJ"}, {t: "Linh hoạt tùy theo cảm hứng", v: "SP"}] },
+        { q: "Khi đi mua sắm, bạn thường bị thu hút bởi...", options: [{t: "Những món đồ có thiết kế hiện đại", v: "NT"}, {t: "Những món đồ thủ công độc bản", v: "NF"}, {t: "Đồ dùng bền bỉ và thực tế", v: "SJ"}, {t: "Màu sắc nổi bật, phá cách", v: "SP"}] },
+        { q: "Bạn dành thời gian rảnh để làm gì?", options: [{t: "Nghiên cứu một chủ đề mới", v: "NT"}, {t: "Viết lách hoặc vẽ vời", v: "NF"}, {t: "Dọn dẹp trang trí lại phòng", v: "SJ"}, {t: "Đi dạo hoặc gặp gỡ bạn bè", v: "SP"}] },
+        { q: "Điều gì quan trọng nhất trong một mối quan hệ?", options: [{t: "Sự tôn trọng không gian riêng", v: "NT"}, {t: "Sự thấu cảm và chia sẻ sâu sắc", v: "NF"}, {t: "Sự ổn định và cam kết", v: "SJ"}, {t: "Sự thú vị và những trải nghiệm mới", v: "SP"}] },
+        { q: "Loại âm nhạc nào phản ánh con người bạn?", options: [{t: "Nhạc Jazz hoặc cổ điển", v: "NT"}, {t: "Indie hoặc Ballad nhẹ nhàng", v: "NF"}, {t: "Pop hoặc nhạc không lời thư giãn", v: "SJ"}, {t: "Rock hoặc EDM sôi động", v: "SP"}] },
+        { q: "Nếu là một loài cây, bạn sẽ là...", options: [{t: "Cây thông già trên đỉnh núi", v: "NT"}, {t: "Nhành hoa nhài dịu dàng", v: "NF"}, {t: "Cây tre kiên cường, ngay thẳng", v: "SJ"}, {t: "Cây dừa bên bãi biển tự do", v: "SP"}] },
+        { q: "Bạn thích được khen ngợi về điều gì?", options: [{t: "Sự thông minh và nhạy bén", v: "NT"}, {t: "Tâm hồn đẹp và sự tử tế", v: "NF"}, {t: "Sự đáng tin cậy và chuẩn mực", v: "SJ"}, {t: "Sự thú vị và tràn đầy năng lượng", v: "SP"}] },
+        { q: "Món quà bạn thích nhận nhất là gì?", options: [{t: "Một bộ đồ dùng công nghệ", v: "NT"}, {t: "Một bức thư tay đầy cảm xúc", v: "NF"}, {t: "Một hũ nến thơm thực tế", v: "SJ"}, {t: "Một chuyến đi bất ngờ", v: "SP"}] },
+        { q: "Cách bạn sắp xếp một buổi tiệc?", options: [{t: "Ít người nhưng chất lượng", v: "NT"}, {t: "Không gian ấm cúng, tràn đầy cảm hứng", v: "NF"}, {t: "Mọi thứ phải diễn ra đúng kịch bản", v: "SJ"}, {t: "Vui vẻ, bùng nổ và không giới hạn", v: "SP"}] },
+        { q: "Khi nhìn lại quá khứ, bạn thường nhớ đến...", options: [{t: "Những bài học rút ra được", v: "NT"}, {t: "Những cảm xúc đã trải qua", v: "NF"}, {t: "Những cột mốc quan trọng", v: "SJ"}, {t: "Những cuộc vui bất tận", v: "SP"}] },
+        { q: "Mục tiêu lớn nhất của bạn trong cuộc sống là?", options: [{t: "Tìm ra chân lý và kiến thức", v: "NT"}, {t: "Lan tỏa tình yêu và sự thấu hiểu", v: "NF"}, {t: "Xây dựng sự nghiệp vững chắc", v: "SJ"}, {t: "Sống trọn vẹn từng khoảnh khắc", v: "SP"}] }
+    ];
+
+    let current = 0;
+    let score = { NT: 0, NF: 0, SP: 0, SJ: 0 };
+
+    function render() {
+        if(current >= data.length) {
+            document.getElementById('game-zone').classList.add('hidden');
+            document.getElementById('info-form').classList.remove('hidden');
+            return;
+        }
+        const q = data[current];
+        document.getElementById('question-text').innerHTML = `<h2 style="min-height:80px">${q.q}</h2>`;
+        document.getElementById('progress-inner').style.width = `${(current/data.length)*100}%`;
+        const zone = document.getElementById('options-zone');
+        zone.innerHTML = '';
+        q.options.forEach(o => {
+            const btn = document.createElement('button');
+            btn.className = 'opt-btn';
+            btn.innerText = o.t;
+            btn.onclick = () => { score[o.v]++; current++; render(); };
+            zone.appendChild(btn);
+        });
+    }
+
+    function submitInfo() {
+        const name = document.getElementById('user-name').value;
+        const contact = document.getElementById('user-contact').value;
+        if(!name || !contact) { alert("Bạn ơi điền đủ thông tin nha!"); return; }
+
+        const final = Object.keys(score).reduce((a, b) => score[a] > score[b] ? a : b);
+        const scents = { NT: "Gỗ Trầm & Hổ Phách", NF: "Trà Trắng & Hoa Nhài", SP: "Cam Chanh & Muối Biển", SJ: "Sả Chanh & Bạc Hà" };
+        const descs = { 
+            NT: "Sâu sắc và bí ẩn, bạn mang trong mình sức mạnh của sự tĩnh lặng và tri thức sắc sảo.", 
+            NF: "Dịu dàng và mộng mơ, bạn lan tỏa sự ấm áp và thấu cảm đến mọi người xung quanh.", 
+            SP: "Phóng khoáng và tràn đầy năng lượng, bạn luôn khao khát những hành trình khám phá mới.", 
+            SJ: "Kiên cường và chân thành, bạn là điểm tựa vững chãi nhất mang lại sự an tâm cho mọi người." 
+        };
+
+        // LƯU DỮ LIỆU VÀO TRÌNH DUYỆT
+        let list = JSON.parse(localStorage.getItem('surveyList')) || [];
+        list.push({ name, contact, scent: scents[final], time: new Date().toLocaleString('vi-VN') });
+        localStorage.setItem('surveyList', JSON.stringify(list));
+
+        // CHUYỂN SANG MÀN HÌNH KẾT QUẢ
+        document.getElementById('info-form').classList.add('hidden');
+        document.getElementById('result-box').classList.remove('hidden');
+        document.getElementById('main-card').style.padding = '0'; // Để kết quả tràn viền đẹp hơn
+        document.getElementById('scent-name').innerText = scents[final];
+        document.getElementById('scent-desc').innerText = descs[final];
+        document.getElementById('thank-you').innerText = `Cảm ơn ${name} đã tham gia khảo sát của Citra!`;
+    }
+
+    // HÀM DÀNH CHO QUẢN LÝ TẢI FILE EXCEL
+    function exportData() {
+        const list = JSON.parse(localStorage.getItem('surveyList'));
+        if(!list || list.length === 0) { alert("Chưa có ai thực hiện khảo sát!"); return; }
+
+        let csv = "Họ Tên,Liên hệ,Kết quả,Thời gian\n";
+        list.forEach(item => {
+            csv += `"${item.name}","${item.contact}","${item.scent}","${item.time}"\n`;
+        });
+
+        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "danh_sach_khach_hang_citra.csv";
+        link.click();
+    }
+
+    render();
+</script>
+</body>
+</html>
