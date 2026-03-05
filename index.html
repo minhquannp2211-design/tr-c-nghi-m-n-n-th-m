@@ -154,7 +154,8 @@
         if(!name || !contact) { alert("Bạn ơi điền đủ thông tin nha!"); return; }
 
         const final = Object.keys(score).reduce((a, b) => score[a] > score[b] ? a : b);
-        const scents = { NT: "Gỗ Tuyết Tùng", NF: "Sen Trắng", SP: "Cam Sữa", SJ: "Cốm Non" };
+        // Đã sửa tên mùi hương theo yêu cầu
+        const scents = { NT: "Gỗ Tuyết Tùng", NF: "Sen Trắng", SP: "Cam Sữa", SJ: "Cốm Non, Lúa Mới" };
         const descs = { 
             NT: "Sâu sắc và bí ẩn, bạn mang trong mình sức mạnh của sự tĩnh lặng và tri thức sắc sảo.", 
             NF: "Dịu dàng và mộng mơ, bạn lan tỏa sự ấm áp và thấu cảm đến mọi người xung quanh.", 
@@ -196,6 +197,4 @@
     render();
 </script>
 </body>
-
 </html>
-
