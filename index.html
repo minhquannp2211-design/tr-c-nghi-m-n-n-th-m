@@ -39,11 +39,6 @@
         }
         .opt-btn:hover { border-color: var(--primary); background: #fdfaf7; transform: translateY(-3px); }
 
-        input { 
-            width: 100%; padding: 18px; margin: 12px 0; border: 1px solid #ddd; 
-            border-radius: 15px; box-sizing: border-box; font-size: 16px;
-        }
-
         /* Nút hiệu ứng nổi bật */
         .cta-btn { 
             background: var(--primary); color: white; padding: 18px 40px; border-radius: 40px; 
@@ -87,19 +82,11 @@
         <div id="options-zone" class="options"></div>
     </div>
 
-    <div id="info-form" class="hidden">
-        <h2 style="color: var(--primary);">Khám phá mùi hương của bạn</h2>
-        <p>Vui lòng để lại thông tin để chúng mình lưu lại kết quả khảo sát nhé!</p>
-        <input type="text" id="user-name" placeholder="Họ và tên của bạn" required>
-        <input type="text" id="user-contact" placeholder="Số điện thoại hoặc Email" required>
-        <button class="cta-btn" onclick="submitInfo()">Thông tin người khảo sát</button>
-    </div>
-
     <div id="result-box" class="hidden">
         <p style="letter-spacing: 2px; font-size: 12px; opacity: 0.9;">TÂM HỒN BẠN MANG MÙI HƯƠNG CỦA...</p>
         <h1 id="scent-name" style="font-size: 2.5rem; margin: 20px 0; color: #fefae0;"></h1>
         <p id="scent-desc" style="line-height: 1.8; font-size: 17px; margin-bottom: 30px;"></p>
-        <p id="thank-you" style="font-style: italic; font-size: 14px; opacity: 0.8; margin-bottom: 20px;"></p>
+        <p id="thank-you" style="font-style: italic; font-size: 14px; opacity: 0.8; margin-bottom: 20px;">Cảm ơn bạn đã tham gia khảo sát của Citra!</p>
         <button class="cta-btn" style="background: white; color: var(--text); box-shadow: none;" onclick="location.reload()">Làm lại trắc nghiệm</button>
     </div>
 </div>
@@ -130,8 +117,7 @@
 
     function render() {
         if(current >= data.length) {
-            document.getElementById('game-zone').classList.add('hidden');
-            document.getElementById('info-form').classList.remove('hidden');
+            showResult(); // Gọi thẳng hàm hiển thị kết quả
             return;
         }
         const q = data[current];
@@ -148,13 +134,8 @@
         });
     }
 
-    function submitInfo() {
-        const name = document.getElementById('user-name').value;
-        const contact = document.getElementById('user-contact').value;
-        if(!name || !contact) { alert("Bạn ơi điền đủ thông tin nha!"); return; }
-
+    function showResult() {
         const final = Object.keys(score).reduce((a, b) => score[a] > score[b] ? a : b);
-        // Đã sửa tên mùi hương theo yêu cầu
         const scents = { NT: "Gỗ Tuyết Tùng", NF: "Sen Trắng", SP: "Cam Sữa", SJ: "Cốm Non, Lúa Mới" };
         const descs = { 
             NT: "Sâu sắc và bí ẩn, bạn mang trong mình sức mạnh của sự tĩnh lặng và tri thức sắc sảo.", 
@@ -163,35 +144,12 @@
             SJ: "Kiên cường và chân thành, bạn là điểm tựa vững chãi nhất mang lại sự an tâm cho mọi người." 
         };
 
-        // LƯU DỮ LIỆU VÀO TRÌNH DUYỆT
-        let list = JSON.parse(localStorage.getItem('surveyList')) || [];
-        list.push({ name, contact, scent: scents[final], time: new Date().toLocaleString('vi-VN') });
-        localStorage.setItem('surveyList', JSON.stringify(list));
-
-        // CHUYỂN SANG MÀN HÌNH KẾT QUẢ
-        document.getElementById('info-form').classList.add('hidden');
+        // CHUYỂN SANG MÀN HÌNH KẾT QUẢ NGAY LẬP TỨC
+        document.getElementById('game-zone').classList.add('hidden');
         document.getElementById('result-box').classList.remove('hidden');
         document.getElementById('main-card').style.padding = '0'; // Để kết quả tràn viền đẹp hơn
         document.getElementById('scent-name').innerText = scents[final];
         document.getElementById('scent-desc').innerText = descs[final];
-        document.getElementById('thank-you').innerText = `Cảm ơn ${name} đã tham gia khảo sát của Citra!`;
-    }
-
-    // HÀM DÀNH CHO QUẢN LÝ TẢI FILE EXCEL
-    function exportData() {
-        const list = JSON.parse(localStorage.getItem('surveyList'));
-        if(!list || list.length === 0) { alert("Chưa có ai thực hiện khảo sát!"); return; }
-
-        let csv = "Họ Tên,Liên hệ,Kết quả,Thời gian\n";
-        list.forEach(item => {
-            csv += `"${item.name}","${item.contact}","${item.scent}","${item.time}"\n`;
-        });
-
-        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = "danh_sach_khach_hang_citra.csv";
-        link.click();
     }
 
     render();
